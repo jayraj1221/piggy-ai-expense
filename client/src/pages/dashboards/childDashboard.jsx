@@ -71,17 +71,7 @@ export default function ChildDashboard() {
       <header className="flex justify-between items-center mb-6">
         <div>
           <h1 className="text-2xl font-semibold">Hi, {user.name}!</h1>
-          <div className="text-xs text-gray-500 mt-1 flex items-center">
-            Last updated: {lastUpdated.toLocaleTimeString()}
-            <button
-              onClick={handleRefresh}
-              disabled={isRefreshing}
-              className="ml-2 text-green-600 hover:text-green-700 focus:outline-none"
-              title="Refresh data"
-            >
-              <RefreshCw size={16} className={isRefreshing ? "animate-spin" : ""} />
-            </button>
-          </div>
+          
         </div>
         <button
           className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg"
@@ -142,8 +132,16 @@ export default function ChildDashboard() {
       <section className="mb-6">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-xl font-semibold">Recent Activity</h2>
-          <div className="text-sm text-gray-500">
-            {isRefreshing ? "Updating..." : `Updated ${minutesSince(lastUpdated)} min ago`}
+          <div className="text-xs text-gray-500 mt-1 flex items-center">
+            Last updated: {lastUpdated.toLocaleTimeString()}
+            <button
+              onClick={handleRefresh}
+              disabled={isRefreshing}
+              className="ml-2 text-green-600 hover:text-green-700 focus:outline-none"
+              title="Refresh data"
+            >
+              <RefreshCw size={16} className={isRefreshing ? "animate-spin" : ""} />
+            </button>
           </div>
         </div>
 
