@@ -6,6 +6,10 @@ const {
     handleGetMonthlySpent
 } = require('../services/transaction.service');
 
+const {
+    generateWeeklySummaries
+} = require('../weeklySummaryJob');
+
 exports.assignPocketMoney = async (req, res) => {
     try {
         const result = await handleAssignPocketMoney(req);
@@ -53,6 +57,17 @@ exports.getMonthlySpent = async (req, res) => {
         res.status(result.status).json(result.data);
     } catch (err) {
         console.error('Get monthly spent error:', err);
+        res.status(500).json({ message: 'Server error' });
+    }
+}
+
+
+exports.getWeeklySummary = async (req, res) => {
+    try {
+        const result = await generateWeeklySummaries();
+        res.status(201).json(result);
+    } catch (err) {
+        console.error('Get weekly summary error:', err);
         res.status(500).json({ message: 'Server error' });
     }
 }
