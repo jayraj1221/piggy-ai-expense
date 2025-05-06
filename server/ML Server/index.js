@@ -2,6 +2,7 @@ const express = require('express');
 const mongoose = require('mongoose');
 const dotenv = require('dotenv');
 const cors = require('cors');
+const startWeeklySummaryCron = require('./weeklySummaryJob'); // 
 
 dotenv.config();
 
@@ -14,7 +15,10 @@ app.use(express.json());
 
 mongoose
   .connect(process.env.MONGO_URI)
-  .then(() => console.log('MongoDB connected'))
+  .then(() => {
+    console.log('MongoDB connected');
+    startWeeklySummaryCron(); 
+  })
   .catch((err) => console.error('MongoDB connection error:', err));
 
 app.use('/', transactionRoutes);

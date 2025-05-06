@@ -14,7 +14,17 @@ const weeklySummarySchema = new mongoose.Schema({
   entertainmentSpend: { type: Number, default: 0 },
   luxurySpend: { type: Number, default: 0 },
   otherSpend: { type: Number, default: 0 },
-  tag: { type: String, enum: ['Super Saver', 'Super Spender', 'Balanced','Big Spender','Needs Improvement'], required: true },
+  tag: { 
+    type: String, 
+    enum: [
+      'Top Saver',      
+      'Average Saver',   
+      'Balanced',      
+      'Big Spender',    
+      'Overspender'     
+    ], 
+    required: true 
+  },
   topCategory: {
     type: String,
     enum: ['food', 'education', 'entertainment', 'luxury', 'donation', 'other'],
