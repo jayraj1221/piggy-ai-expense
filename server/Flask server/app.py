@@ -6,14 +6,16 @@ import pandas as pd
 def create_app():
     app = Flask(__name__)
 
-    # Define model and encoder paths
+    # Paths
     BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-    MODEL_PATH = os.path.join(BASE_DIR, "models", "random_forest_model.joblib")
+    TAG_MODEL_PATH = os.path.join(BASE_DIR, "models", "random_forest_model.joblib")
+    SCORE_MODEL_PATH = os.path.join(BASE_DIR, "models", "linear_regression_model.joblib")
     ENCODER_PATH = os.path.join(BASE_DIR, "utils", "label_encoder.joblib")
 
-    # Load model and label encoder once
+    # Load models
     try:
-        model = joblib.load(MODEL_PATH)
+        tag_model = joblib.load(TAG_MODEL_PATH)
+        score_model = joblib.load(SCORE_MODEL_PATH)
         label_encoder = joblib.load(ENCODER_PATH)
     except FileNotFoundError as e:
         raise RuntimeError(f"Model or encoder not found: {e}")
@@ -37,10 +39,22 @@ def create_app():
                 return jsonify({"error": "Missing one or more required fields."}), 400
 
             input_df = pd.DataFrame([data])
-            pred_encoded = model.predict(input_df)[0]
-            pred_label = label_encoder.inverse_transform([pred_encoded])[0]
 
-            return jsonify({"predicted_tag": pred_label})
+            # Predict tag
+            tag_pred_encoded = tag_model.predict(input_df)[0]
+            tag_pred_label = label_encoder.inverse_transform([tag_pred_encoded])[0]
+
+            # Add predicted tag to input for credit score
+            input_df_with_tag = input_df.copy()
+            input_df_with_tag["tag"] = tag_pred_encoded
+
+            # Predict credit score using updated input
+            credit_score_pred = score_model.predict(input_df_with_tag)[0]
+
+            return jsonify({
+                "predicted_tag": tag_pred_label,
+                "predicted_credit_score": round(credit_score_pred, 2)
+            })
 
         except Exception as e:
             return jsonify({"error": str(e)}), 500
