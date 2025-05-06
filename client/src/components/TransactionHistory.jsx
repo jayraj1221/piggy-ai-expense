@@ -21,7 +21,6 @@ const TransactionHistory = ({ data = [] }) => {
                             key={item.id || item._id}
                             title={item.description || ''}
                             daysAgo={
-                                item.month || 
                                 new Date(item.date).toLocaleDateString('en-US', {
                                     year: 'numeric',
                                     month: 'long',
