@@ -39,7 +39,7 @@ export default function AddTransaction({ isOpen, onClose, onSuccess }) {
       education: '📚',
       entertainment: '🎮',
       luxury: '💎',
-      saving: '🏦',
+      donation: '🤝',
       other: '💰',
     };
     setEmoji(emojis[formData.category] || '💰');
@@ -95,7 +95,7 @@ export default function AddTransaction({ isOpen, onClose, onSuccess }) {
     { value: 'education', label: '📚 Education' },
     { value: 'entertainment', label: '🎮 Entertainment' },
     { value: 'luxury', label: '💎 Luxury' },
-    { value: 'saving', label: '🏦 Saving' },
+    { value: 'donation', label: '🤝 Donation' },
     { value: 'other', label: '💰 Other' }
   ];
 
