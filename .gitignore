@@ -6,3 +6,6 @@ node_modules/
 
 **/node_modules/
 
+
+// ignore server/flask server/models/transformer_model.pt
+server/flask/server/models/transformer_model.pt
