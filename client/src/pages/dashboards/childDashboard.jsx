@@ -4,10 +4,10 @@ import TransactionHistory from '../../components/TransactionHistory';
 import AddTransation from '../../components/addTransaction';
 import axios from 'axios';
 import { RefreshCw } from 'lucide-react';
-
+import { Logo } from '../../components/logo';
+import { useNavigate } from 'react-router-dom';
 export default function ChildDashboard() {
   const { user, loading } = useUser();
-
   const [transactionItems, setTransactionItems] = useState([]);
   const [pocketMoneyHistory, setPocketMoneyHistory] = useState([]);
   const [history, setHistory] = useState(true);
@@ -15,8 +15,7 @@ export default function ChildDashboard() {
   const [lastUpdated, setLastUpdated] = useState(new Date());
   const [isAddModalOpen, setAddModalOpen] = useState(false);
   const [totalSpending, setTotalSpending] = useState(0);
-
-
+  const navigate = useNavigate();
   const fetchData = useCallback(async () => {
     if (!user) return;
   
@@ -68,18 +67,32 @@ export default function ChildDashboard() {
 
   return (
     <div className="min-h-screen bg-white px-6 py-4 text-gray-800">
-      <header className="flex justify-between items-center mb-6">
-        <div>
-          <h1 className="text-2xl font-semibold">Hi, {user.name}!</h1>
-          
-        </div>
-        <button
-          className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg"
-          onClick={() => setAddModalOpen(true)}
-        >
-          Add Expense
-        </button>
-      </header>
+        <Logo variant='nidvfnf'/>
+        <header className="flex justify-between items-center mb-6 ">
+
+  <div className='p-4 flex justify-center'>
+    <h1 className="text-2xl font-semibold text-secondary">Hi, {user.name}!</h1>
+  </div>
+
+  <div className=' p-4'>
+    <div className="flex space-x-4">
+      <button
+        className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg"
+        onClick={() => setAddModalOpen(true)}
+      >
+        Add Expense
+      </button>
+     
+      <button
+        className="bg-green-500 hover:bg-green-600  text-white px-4 py-2 rounded-lg"
+        onClick={() => navigate('/goal')}
+      >
+        Goals
+      </button>
+    </div>
+  </div>
+</header>
+
 
       <section className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
         <Card
