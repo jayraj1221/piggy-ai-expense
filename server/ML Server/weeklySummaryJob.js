@@ -119,6 +119,12 @@ async function generateWeeklySummaries() {
       summary.tag = response.data.predicted_tag;
       summary.creditScore = response.data.predicted_credit_score;
 
+      const result = await axios.put("http://localhost:5000/auth/update-tag-credit", {
+        userId: childId,
+        tag: summary.tag,
+        credit: summary.creditScore
+      });
+
       await summary.save();
 
       return summary;

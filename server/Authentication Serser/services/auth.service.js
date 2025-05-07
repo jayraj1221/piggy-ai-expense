@@ -105,3 +105,25 @@ exports.getChildren = async (parent) => {
 
   return children;
 };
+
+
+exports.updateTagCredit = async ({ userId, credit, tag }) => {
+  
+
+  console.log("User ID:", userId);
+  console.log("Credit Score:", credit); 
+  console.log("Tag:", tag);
+
+  const updatedUser = await User.findByIdAndUpdate(
+    userId,
+    { creditScore: credit, tag: tag },
+    { new: true, runValidators: true }
+  );
+
+  if (!updatedUser) throw { statusCode: 404, message: 'User not found' };
+
+  return {
+    message: 'Tag credit updated successfully',
+    user: updatedUser,
+  };
+}

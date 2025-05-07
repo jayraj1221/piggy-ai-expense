@@ -10,12 +10,13 @@ import ChildDashboard from './pages/dashboards/childDashboard';
 import ChildDetails from './pages/ChildDetails';
 import { UserProvider } from "./context/UserContext";
 import { ChildProvider } from './context/ChildDetailsContext';
-import { GoalProvider } from './context/GoalContext';
 import Goal from './pages/Goal';
+import ActivityReward from './pages/ActivityReward';
+
+
 function App() {
   return (
     <UserProvider>
-      <GoalProvider>
         <ChildProvider>
           <Router>
             <div className="App">
@@ -27,12 +28,12 @@ function App() {
                 <Route path="/dashboard/parent" element={<ParentDashboard />} />
                 <Route path="/dashboard/child" element={<ChildDashboard />} />
                 <Route path="/goal" element={<Goal />} />
+                <Route path="/activity-reward" element={<ActivityReward />} />
                 <Route path="/" element={<Home />} />
               </Routes>
             </div>
           </Router>
         </ChildProvider>
-      </GoalProvider>
     </UserProvider>
   );
 }

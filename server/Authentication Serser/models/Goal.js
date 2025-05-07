@@ -1,35 +1,41 @@
-// server/ML Server/models/Goal.js
-
 const mongoose = require('mongoose');
+const Schema = mongoose.Schema;
 
-const goalSchema = new mongoose.Schema({
-  childId: {
-    type: mongoose.Schema.Types.ObjectId,
+const goalSchema = new Schema({
+  userId: {
+    type: Schema.Types.ObjectId,
     ref: 'User',
     required: true,
-    unique: true, 
+    index: true 
   },
   title: {
     type: String,
     required: true,
+    trim: true
   },
   targetAmount: {
     type: Number,
     required: true,
+    min: 1
   },
-  savedAmount: {
+  currentAmount: {
     type: Number,
     default: 0,
-  },
-  deadline: {
-    type: Date,
-    required: false,
+    min: 0
   },
   status: {
     type: String,
-    enum: ['in progress', 'completed', 'cancelled'],
-    default: 'in progress',
+    enum: ['In Progress', 'Completed', 'Expired'],
+    default: 'In Progress'
   },
-}, { timestamps: true });
+  deadline: {
+    type: Date,
+    default: null
+  }
+}, { 
+  timestamps: true 
+});
 
-module.exports = mongoose.model('Goal', goalSchema);
+const Goal = mongoose.model('Gaol', goalSchema);
+
+module.exports = Goal;

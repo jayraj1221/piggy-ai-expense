@@ -19,7 +19,6 @@ const protect = async (req, res, next) => {
         return res.status(401).json({ message: 'Not authorized, user not found' });
       }
       
-      console.log(req.user)
       next();
     } catch (error) {
       console.error('Token verification failed:', error);

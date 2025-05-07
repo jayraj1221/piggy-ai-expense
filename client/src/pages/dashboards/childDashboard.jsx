@@ -3,14 +3,14 @@ import { useUser } from '../../context/UserContext';
 import TransactionHistory from '../../components/TransactionHistory';
 import AddTransation from '../../components/addTransaction';
 import axios from 'axios';
-import { 
-  RefreshCw, 
-  Wallet, 
-  TrendingUp, 
-  CreditCard, 
-  ChevronDown, 
-  ChevronUp, 
-  Clock, 
+import {
+  RefreshCw,
+  Wallet,
+  TrendingUp,
+  CreditCard,
+  ChevronDown,
+  ChevronUp,
+  Clock,
   DollarSign,
   Award,
   PieChart,
@@ -20,14 +20,14 @@ import {
 } from 'lucide-react';
 import { Logo } from '../../components/logo';
 import { useNavigate } from 'react-router-dom';
+import Tag from '../../components/tag';
 
 export default function ChildDashboard() {
-  const { user, loading ,logout} = useUser();
+  const { user, loading, logout } = useUser();
   const [transactionItems, setTransactionItems] = useState([]);
   const [pocketMoneyHistory, setPocketMoneyHistory] = useState([]);
   const [history, setHistory] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [lastUpdated, setLastUpdated] = useState(new Date());
   const [isAddModalOpen, setAddModalOpen] = useState(false);
   const [totalSpending, setTotalSpending] = useState(0);
   const [expandedSection, setExpandedSection] = useState('activity');
@@ -35,32 +35,31 @@ export default function ChildDashboard() {
 
   const fetchData = useCallback(async () => {
     if (!user) return;
-  
+
     setIsRefreshing(true);
-  
+
     try {
       const [transactionResponse, pocketMoneyResponse, spendingResponse] = await Promise.all([
         axios.post(`${process.env.REACT_APP_SERVER_URL}/ml/getTransactionHistory`, { userId: user._id }),
         axios.post(`${process.env.REACT_APP_SERVER_URL}/ml/getPocketMoneyHistory`, { userId: user._id }),
         axios.get(`${process.env.REACT_APP_SERVER_URL}/ml/getMonthlySpent`, { params: { userId: user._id } }),
       ]);
-  
+
       setTransactionItems(Array.isArray(transactionResponse.data) ? transactionResponse.data : []);
       setPocketMoneyHistory(Array.isArray(pocketMoneyResponse.data) ? pocketMoneyResponse.data : []);
       setTotalSpending(spendingResponse.data.totalSpent || 0);
-  
-      setLastUpdated(new Date());
+
     } catch (error) {
       console.error('Failed to fetch data:', error);
     } finally {
       setIsRefreshing(false);
     }
   }, [user]);
-  
+
   useEffect(() => {
     if (user) {
       fetchData();
-    }else{
+    } else {
       navigate('/')
     }
   }, [user, fetchData]);
@@ -89,76 +88,78 @@ export default function ChildDashboard() {
     );
   }
 
-  // Calculate spending percentages for the donut chart
-  const spendingPercent = totalSpending > 0 
+
+  const spendingPercent = totalSpending > 0
     ? Math.min(Math.round((totalSpending / (user.pocketMoney || 1)) * 100), 100)
     : 0;
-  
+
   const remainingPercent = 100 - spendingPercent;
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Top Navigation Bar */}
-<div className="bg-white shadow-sm sticky top-0 z-10">
-  <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-    <div className="flex justify-between items-center py-4">
-      <div className="flex items-center">
-        <Logo variant="nidvfnf" className="h-8 w-auto" />
-        <h1 className="ml-3 text-xl font-semibold text-gray-800 hidden sm:block">MyFinance</h1>
-      </div>
-      
-      <div className="flex items-center space-x-4">
-        <div className="hidden md:flex items-center space-x-2 bg-gray-100 rounded-full px-4 py-2">
-          <div className="h-8 w-8 rounded-full bg-secondary text-white flex items-center justify-center">
-            {user.name.charAt(0).toUpperCase()}
+      <div className="bg-white shadow-sm sticky top-0 z-10">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center py-4">
+            <div className="flex items-center">
+              <Logo variant="nidvfnf" className="h-12 w-auto" />
+            </div>
+
+            <div className="flex items-center space-x-4">
+              <button
+                onClick={() => navigate('/activity-reward')}
+                className="flex items-center space-x-2 bg-gradient-to-r from-green-500 to-blue-500 text-white font-medium rounded-full px-4 py-1.5 shadow-sm hover:shadow-md transition-all duration-200"
+                title="Complete daily activities and earn rewards"
+              >
+                <Award size={16} className="text-white" />
+                <span className="text-xs md:text-sm">Daily Activity & Unlock Rewards</span>
+                <div className="hidden md:flex items-center justify-center w-4 h-4 bg-yellow-300 text-blue-800 rounded-full text-xs font-bold">
+                  ₹
+                </div>
+              </button>
+
+              <button
+                onClick={handleRefresh}
+                disabled={isRefreshing}
+                className="p-2 rounded-full hover:bg-gray-100 focus:outline-none text-gray-500"
+                title="Refresh data"
+              >
+                <RefreshCw size={20} className={isRefreshing ? "animate-spin" : ""} />
+              </button>
+
+              <button
+                onClick={() => {
+                  logout()
+                  navigate('/')
+                }}
+                className="flex items-center space-x-1 px-3 py-2 rounded-md bg-gray-100 hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition-colors"
+                title="Logout"
+              >
+                <LogOut size={16} className="text-gray-600" />
+                <span className="text-sm font-medium text-gray-700 hidden sm:inline">Logout</span>
+              </button>
+            </div>
           </div>
-          <span className="font-medium text-gray-700">{user.name}</span>
         </div>
-        
-        <button
-          onClick={handleRefresh}
-          disabled={isRefreshing}
-          className="p-2 rounded-full hover:bg-gray-100 focus:outline-none text-gray-500"
-          title="Refresh data"
-        >
-          <RefreshCw size={20} className={isRefreshing ? "animate-spin" : ""} />
-        </button>
-        
-        <button
-          onClick={()=>{
-            logout()
-            navigate('/')
-          }}
-          className="flex items-center space-x-1 px-3 py-2 rounded-md bg-gray-100 hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition-colors"
-          title="Logout"
-        >
-          <LogOut size={16} className="text-gray-600" />
-          <span className="text-sm font-medium text-gray-700 hidden sm:inline">Logout</span>
-        </button>
       </div>
-    </div>
-  </div>
-</div>
 
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Welcome Section */}
+
         <div className="mb-8">
           <div className="flex justify-between items-center mb-2">
             <h2 className="text-2xl font-bold text-gray-800">Welcome back, {user.name}!</h2>
-            <span className="text-sm text-gray-500">Last updated: {lastUpdated.toLocaleTimeString()}</span>
+            <Tag tag={user.tag} />
           </div>
-          <p className="text-gray-600">Here's an overview of your finances today.</p>
         </div>
 
         {/* Quick Actions */}
         <div className="grid grid-cols-2 md:grid-cols-2 gap-4 mb-8">
-          <QuickAction 
+          <QuickAction
             icon={<Plus />}
             label="Add Expense"
             onClick={() => setAddModalOpen(true)}
             bgColor="bg-green-500"
           />
-          <QuickAction 
+          <QuickAction
             icon={<TrendingUp />}
             label="Goals"
             onClick={() => navigate('/goal')}
@@ -196,21 +197,21 @@ export default function ChildDashboard() {
 
         {/* Collapsible Sections */}
         <div className="mb-8">
-          <CollapsibleSection 
-            title="Spending Overview Weekly" 
-            isExpanded={expandedSection === 'spending'} 
+          <CollapsibleSection
+            title="Spending Overview Weekly"
+            isExpanded={expandedSection === 'spending'}
             onToggle={() => toggleSection('spending')}
             icon={<PieChart size={20} className="text-purple-500" />}
           >
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="bg-white p-6 rounded-xl shadow-sm">
-                <h3 className="text-lg font-semibold mb-4">Monthly Budget</h3>
+                <h3 className="text-lg font-semibold mb-4">Weekly Budget</h3>
                 <div className="flex items-center justify-center">
-                  <DonutChart 
-                    spent={spendingPercent} 
-                    remaining={remainingPercent} 
-                    amount={totalSpending} 
-                    total={user.pocketMoney || 0} 
+                  <DonutChart
+                    spent={spendingPercent}
+                    remaining={remainingPercent}
+                    amount={totalSpending}
+                    total={user.pocketMoney || 0}
                   />
                 </div>
               </div>
@@ -225,9 +226,9 @@ export default function ChildDashboard() {
             </div>
           </CollapsibleSection>
 
-          <CollapsibleSection 
-            title="Credit Score" 
-            isExpanded={expandedSection === 'credit'} 
+          <CollapsibleSection
+            title="Credit Score"
+            isExpanded={expandedSection === 'credit'}
             onToggle={() => toggleSection('credit')}
             icon={<Award size={20} className="text-blue-500" />}
           >
@@ -247,12 +248,12 @@ export default function ChildDashboard() {
                           : 'Needs Work'}
                     </p>
                     <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
-                      <div 
-                        className="bg-blue-500 h-2 rounded-full" 
+                      <div
+                        className="bg-blue-500 h-2 rounded-full"
                         style={{ width: `${user.creditScore}%` }}
                       ></div>
                     </div>
-                    <p className="text-sm text-gray-500 mt-2">Your score is in the top {100-user.creditScore}% of users</p>
+                    <p className="text-sm text-gray-500 mt-2">Your score is in the top {100 - user.creditScore}% of users</p>
                   </div>
                 </div>
               </div>
@@ -264,7 +265,7 @@ export default function ChildDashboard() {
                 <Factor label="Spending Habits" level="Good" percent={75} />
                 <Factor label="Savings Rate" level="Fair" percent={55} color="yellow" />
                 <Factor label="Financial Goals" level="Good" percent={70} />
-                
+
                 <div className="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-100">
                   <div className="flex">
                     <AlertCircle size={18} className="text-blue-500 mr-2 flex-shrink-0 mt-0.5" />
@@ -277,9 +278,9 @@ export default function ChildDashboard() {
             </div>
           </CollapsibleSection>
 
-          <CollapsibleSection 
-            title="Recent Activity" 
-            isExpanded={expandedSection === 'activity'} 
+          <CollapsibleSection
+            title="Recent Activity"
+            isExpanded={expandedSection === 'activity'}
             onToggle={() => toggleSection('activity')}
             icon={<Clock size={20} className="text-green-500" />}
           >
@@ -287,22 +288,20 @@ export default function ChildDashboard() {
               <div className="flex gap-4 mb-6">
                 <button
                   onClick={() => setHistory(true)}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                    history 
-                      ? 'bg-green-100 text-green-700 border border-green-200' 
-                      : 'text-gray-600 hover:bg-gray-100'
-                  }`}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${history
+                    ? 'bg-green-100 text-green-700 border border-green-200'
+                    : 'text-gray-600 hover:bg-gray-100'
+                    }`}
                 >
                   Expenses
                 </button>
 
                 <button
                   onClick={() => setHistory(false)}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                    !history 
-                      ? 'bg-green-100 text-green-700 border border-green-200' 
-                      : 'text-gray-600 hover:bg-gray-100'
-                  }`}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${!history
+                    ? 'bg-green-100 text-green-700 border border-green-200'
+                    : 'text-gray-600 hover:bg-gray-100'
+                    }`}
                 >
                   Pocket Money
                 </button>
@@ -322,12 +321,9 @@ export default function ChildDashboard() {
             <div>
               <h3 className="font-bold text-blue-800 mb-2">Financial Tip of the Day</h3>
               <p className="text-blue-700">
-                Try the 50/30/20 rule: Spend 50% on needs, 30% on wants, and save 20% of your pocket money 
+                Try the 50/30/20 rule: Spend 50% on needs, 30% on wants, and save 20% of your pocket money
                 to build good financial habits early.
               </p>
-              <button className="mt-3 text-sm font-medium text-blue-600 hover:text-blue-800">
-                See more tips →
-              </button>
             </div>
           </div>
         </div>
@@ -365,7 +361,7 @@ function Card({ icon, title, value, subtitle, trend, trendUp = true }) {
         <div className="bg-gray-50 p-2 rounded-lg">
           {icon}
         </div>
-        <span className="text-xs text-gray-500">This month</span>
+        <span className="text-xs text-gray-500">This week</span>
       </div>
       <h3 className="text-sm text-gray-500 mb-1">{title}</h3>
       <p className="text-2xl font-bold mb-1">{value}</p>
@@ -397,11 +393,10 @@ function CollapsibleSection({ title, children, isExpanded, onToggle, icon }) {
           {isExpanded ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
         </div>
       </button>
-      
-      <div 
-        className={`transition-all duration-300 ease-in-out overflow-hidden ${
-          isExpanded ? 'max-h-screen' : 'max-h-0'
-        }`}
+
+      <div
+        className={`transition-all duration-300 ease-in-out overflow-hidden ${isExpanded ? 'max-h-screen' : 'max-h-0'
+          }`}
       >
         <div className="p-5 pt-0 border-t">
           {children}
@@ -417,16 +412,15 @@ function Factor({ label, level, percent, color = 'green' }) {
     yellow: 'bg-yellow-500',
     red: 'bg-red-500',
   };
-  
+
   return (
     <div className="mb-4">
       <div className="flex justify-between text-sm mb-1">
         <span className="font-medium text-gray-700">{label}</span>
-        <span className={`${
-          level === 'Excellent' ? 'text-green-600' : 
-          level === 'Good' ? 'text-blue-600' : 
-          'text-yellow-600'
-        }`}>{level}</span>
+        <span className={`${level === 'Excellent' ? 'text-green-600' :
+          level === 'Good' ? 'text-blue-600' :
+            'text-yellow-600'
+          }`}>{level}</span>
       </div>
       <div className="w-full bg-gray-200 rounded-full h-2">
         <div
@@ -522,32 +516,32 @@ function DonutChart({ spent, remaining, amount, total }) {
     <div className="relative">
       <svg width="200" height="200" viewBox="0 0 100 100">
         {/* Background circle */}
-        <circle 
-          cx="50" 
-          cy="50" 
-          r="40" 
-          fill="none" 
-          stroke="#E5E7EB" 
-          strokeWidth="10" 
+        <circle
+          cx="50"
+          cy="50"
+          r="40"
+          fill="none"
+          stroke="#E5E7EB"
+          strokeWidth="10"
         />
-        
+
         {/* Progress circle */}
-        <circle 
-          cx="50" 
-          cy="50" 
-          r="40" 
-          fill="none" 
-          stroke="#22C55E" 
-          strokeWidth="10" 
-          strokeDasharray={dashArray} 
-          strokeDashoffset={dashOffset} 
+        <circle
+          cx="50"
+          cy="50"
+          r="40"
+          fill="none"
+          stroke="#22C55E"
+          strokeWidth="10"
+          strokeDasharray={dashArray}
+          strokeDashoffset={dashOffset}
           strokeLinecap="round"
           transform="rotate(-90 50 50)"
           className={spent > 90 ? "stroke-red-500" : spent > 70 ? "stroke-yellow-500" : "stroke-green-500"}
         />
       </svg>
-      
-      <div className="absolute inset-0 flex flex-col items-center justify-center">
+
+      <div className="absolute inset-0 flex flex-col items-center mt-16 text-center">
         <p className="text-3xl font-bold">{spent}%</p>
         <p className="text-sm text-gray-500">of budget spent</p>
       </div>
