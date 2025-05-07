@@ -2,6 +2,7 @@ const cron = require("node-cron");
 const Transaction = require("./models/Transaction");
 const PocketMoney = require("./models/PocketMoney");
 const WeeklySummary = require("./models/weeklySummarySchema");
+const { default: axios } = require("axios");
 
 function assignTopCategory(spends) {
   let top = 'other';
@@ -15,101 +16,118 @@ function assignTopCategory(spends) {
   return top;
 }
 
-function assignTag(savingsRate, expenseRatio, donatedRatio) {
-  if (savingsRate >= 0.5 && donatedRatio >= 0.05) return "Top Saver";
-  if (savingsRate >= 0.3) return "Average Saver";
-  if (expenseRatio <= 0.8) return "Balanced";
-  if (expenseRatio > 1) return "Overspender";
-  return "Big Spender";
-}
-
-function generateCreditScore(tag) {
-  switch (tag) {
-    case "Top Saver": return Math.floor(Math.random() * 16) + 85;
-    case "Average Saver": return Math.floor(Math.random() * 21) + 70;
-    case "Balanced": return Math.floor(Math.random() * 26) + 60;
-    case "Big Spender": return Math.floor(Math.random() * 31) + 45;
-    case "Overspender": return Math.floor(Math.random() * 31) + 30;
-  }
-}
 
 async function generateWeeklySummaries() {
-  const now = new Date();
-  const startOfWeek = new Date(now);
-  startOfWeek.setDate(now.getDate() - 7);
-  startOfWeek.setHours(0, 0, 0, 0);
+  const weekEnd = new Date();
+  const weekStart = weekEnd.getDate() - 7;
 
-  const transactions = await Transaction.find({
-    date: { $gte: startOfWeek, $lte: now },
-  });
-
-  const pocketMoneys = await PocketMoney.find({
-    date: { $gte: startOfWeek, $lte: now },
-  });
-
-  const childIds = new Set([
-    ...transactions.map(t => t.childId.toString()),
-    ...pocketMoneys.map(p => p.childId.toString()),
-  ]);
-
-  for (const childId of childIds) {
-    const txs = transactions.filter(t => t.childId.toString() === childId);
-    const income = pocketMoneys
-      .filter(p => p.childId.toString() === childId)
-      .reduce((sum, p) => sum + p.amount, 0);
-
-    const expenses = txs.filter(t => t.type === "expense");
-    const foodSpend = expenses.filter(t => t.category === 'food').reduce((sum, e) => sum + e.amount, 0);
-    const educationSpend = expenses.filter(t => t.category === 'education').reduce((sum, e) => sum + e.amount, 0);
-    const entertainmentSpend = expenses.filter(t => t.category === 'entertainment').reduce((sum, e) => sum + e.amount, 0);
-    const luxurySpend = expenses.filter(t => t.category === 'luxury').reduce((sum, e) => sum + e.amount, 0);
-    const otherSpend = expenses.filter(t => t.category === 'other').reduce((sum, e) => sum + e.amount, 0);
-    const donatedAmount = txs.filter(t => t.description?.toLowerCase().includes("donate")).reduce((sum, e) => sum + e.amount, 0);
-
-    const totalExpense = foodSpend + educationSpend + entertainmentSpend + luxurySpend + otherSpend + donatedAmount;
-    const savings = income - totalExpense;
-    const noOfTransactions = txs.length;
-    const avgTransactionAmount = noOfTransactions ? totalExpense / noOfTransactions : 0;
-    const topCategory = assignTopCategory({
-      food: foodSpend,
-      education: educationSpend,
-      entertainment: entertainmentSpend,
-      luxury: luxurySpend,
-      donation: donatedAmount,
-      other: otherSpend,
+  try {
+    const childIdsFromTransactions = await Transaction.distinct("childId", {
+      date: { $gte: weekStart, $lt: weekEnd }
     });
 
-    const savingsRate = income ? savings / income : 0;
-    const expenseRatio = income ? totalExpense / income : 0;
-    const donatedRatio = income ? donatedAmount / income : 0;
-    const tag = assignTag(savingsRate, expenseRatio, donatedRatio);
-    const creditScore = generateCreditScore(tag);
+    const childIdsFromPocketMoney = await PocketMoney.distinct("childId", {
+      date: { $gte: weekStart, $lt: weekEnd }
+    });
 
-    // Use upsert to avoid duplicate summaries
-    await WeeklySummary.findOneAndUpdate(
-      { childId, weekStart: startOfWeek },
-      {
+    const allChildIds = [...new Set([...childIdsFromTransactions, ...childIdsFromPocketMoney])];
+
+    for (const childId of allChildIds) {
+      const transactions = await Transaction.find({
         childId,
-        weekStart: startOfWeek,
-        totalIncome: income,
+        date: { $gte: weekStart, $lt: weekEnd }
+      });
+
+      const pocketMoneys = await PocketMoney.find({
+        childId,
+        date: { $gte: weekStart, $lt: weekEnd }
+      });
+
+      const totalIncomeFromTransactions = transactions
+        .filter(t => t.type === 'income')
+        .reduce((sum, t) => sum + t.amount, 0);
+
+      const totalExpense = transactions
+        .filter(t => t.type === 'expense')
+        .reduce((sum, t) => sum + t.amount, 0);
+
+      const totalIncomeFromPocketMoney = pocketMoneys.reduce((sum, p) => sum + p.amount, 0);
+      const totalIncome = totalIncomeFromTransactions + totalIncomeFromPocketMoney;
+
+      const savings = totalIncome - totalExpense;
+
+      const noOfTransactions = transactions.length;
+      const avgTransactionAmount = noOfTransactions > 0
+        ? (transactions.reduce((sum, t) => sum + t.amount, 0) / noOfTransactions)
+        : 0;
+
+      const spends = {
+        food: 0,
+        education: 0,
+        entertainment: 0,
+        luxury: 0,
+        donate: 0,
+        other: 0,
+      };
+
+      for (const t of transactions) {
+        if (t.type === 'expense') {
+          if (spends.hasOwnProperty(t.category)) {
+            spends[t.category] += t.amount;
+          } else {
+            spends.other += t.amount;
+          }
+        }
+      }
+
+      const topCategory = assignTopCategory(spends);
+
+      const summary = new WeeklySummary({
+        childId,
+        weekStart,
+        totalIncome,
         totalExpense,
         savings,
         noOfTransactions,
         avgTransactionAmount,
-        donatedAmount,
-        foodSpend,
-        educationSpend,
-        entertainmentSpend,
-        luxurySpend,
-        otherSpend,
-        tag,
+        donatedAmount: spends.donate,
+        foodSpend: spends.food,
+        educationSpend: spends.education,
+        entertainmentSpend: spends.entertainment,
+        luxurySpend: spends.luxury,
+        otherSpend: spends.other,
+        tag: 'Balanced',
         topCategory,
-        creditScore,
-      },
-      { upsert: true, new: true }
-    );
+        creditScore: 50
+      });
 
-    console.log(`✅ Weekly summary updated/created for childId: ${childId}`);
+      const response = await axios.post("http://localhost:5000/flask/predict", {
+        totalIncome,
+        totalExpense,
+        savings,
+        noOfTransactions,
+        avgTransactionAmount,
+        donatedAmount: spends.donate,
+        foodSpend: spends.food,
+        educationSpend: spends.education,
+        entertainmentSpend: spends.entertainment,
+        luxurySpend: spends.luxury,
+        otherSpend: spends.other,
+        topCategory
+      });
+
+      summary.tag = response.data.predicted_tag;
+      summary.creditScore = response.data.predicted_credit_score;
+
+      await summary.save();
+
+      return summary;
+    }
+
+    
+    console.log("✅ Weekly summaries generated successfully.");
+  } catch (err) {
+    console.error("❌ Error generating weekly summaries:", err);
   }
 }
 
@@ -122,3 +140,4 @@ function startWeeklySummaryCron() {
 }
 
 module.exports = startWeeklySummaryCron;
+module.exports.generateWeeklySummaries = generateWeeklySummaries;

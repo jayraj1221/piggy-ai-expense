@@ -28,7 +28,7 @@ def create_app():
     def predict():
         try:
             data = request.get_json()
-
+            
             expected_fields = [
                 'totalIncome', 'totalExpense', 'savings', 'noOfTransactions',
                 'avgTransactionAmount', 'donatedAmount', 'foodSpend', 'educationSpend',
@@ -50,6 +50,9 @@ def create_app():
 
             # Predict credit score using updated input
             credit_score_pred = score_model.predict(input_df_with_tag)[0]
+            
+            print("Predicted tag:", tag_pred_label)
+            print("Predicted credit score:", credit_score_pred)
 
             return jsonify({
                 "predicted_tag": tag_pred_label,

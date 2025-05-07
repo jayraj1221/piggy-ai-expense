@@ -6,7 +6,8 @@ const {
   spendPocketMoney,
   getTransactionHistory,
   getPocketMoneyHistory,
-  getMonthlySpent
+  getMonthlySpent,
+  getWeeklySummary,
 } = require('../controllers/transaction.controller');
 
 
@@ -15,5 +16,7 @@ router.post('/spend', spendPocketMoney);
 router.post('/getTransactionHistory', getTransactionHistory);
 router.post('/getPocketMoneyHistory', getPocketMoneyHistory);
 router.get('/getMonthlySpent', getMonthlySpent);
+router.get('/getWeeklySummary', getWeeklySummary);
+
 
 module.exports = router;

@@ -26,16 +26,16 @@ const userSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
       required: function () {
-        return this.role === 'child';  // Only required if the user is a child
+        return this.role === 'child';  
       },
     },
     creditScore: { 
       type: Number, 
-      default: 100 
-    }, // starting score
+      default: 50 
+    }, 
     tag: { 
       type: String, 
-      default: "New User" 
+      default: "Balanced" 
     },
     pocketMoney: { 
       type: Number, 

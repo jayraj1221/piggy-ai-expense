@@ -12,6 +12,7 @@ app.use(cors());
 
 app.use('/auth', expressProxy(process.env.AUTH_URL));
 app.use('/ml', expressProxy(process.env.ML_URL));
+app.use('/flask', expressProxy(process.env.FLASK_URL));
 
 
 const PORT = process.env.GATEWAY_PORT || 5000;
