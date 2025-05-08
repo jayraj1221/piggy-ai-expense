@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, use } from "react";
 import { LogOut } from "lucide-react";
 import Button from "../../components/button";
 import { Logo } from "../../components/logo";
@@ -36,6 +36,10 @@ export default function ParentDashboard() {
       setLoadingChildren(false);
     }
   };
+
+  useEffect(() => {
+    fetchChildren();
+  });
 
   useEffect(() => {
     if (!loading && !user) {

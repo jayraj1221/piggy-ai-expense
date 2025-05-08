@@ -32,7 +32,7 @@ exports.addActivity = async (user, activity) => {
         const newActivity = new Activity({
             userId: user._id,
             activity,
-            reward: Math.floor(response.data.predicted_reward),
+            reward: Math.floor(response.data.predicted_reward) > 0 ? Math.floor(response.data.predicted_reward) : 0,
         });
 
         await newActivity.save();

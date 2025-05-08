@@ -1,28 +1,25 @@
 import { createContext, useContext, useState } from "react";
 
-// Create context
 const ChildContext = createContext();
 
-// Create a custom hook to use the ChildContext
 export const useChildContext = () => {
   return useContext(ChildContext);
 };
 
-// Create a provider component
 export const ChildProvider = ({ children }) => {
-  const [childList, setChildList] = useState([]); // To store the entire list of children
-  const [selectedChild, setSelectedChild] = useState(null); // To store the selected child
+  const [childList, setChildList] = useState([]); 
+  const [selectedChild, setSelectedChild] = useState(null); 
 
   const setChildrenList = (children) => {
-    setChildList(children); // Set the whole child array
+    setChildList(children); 
   };
 
   const setChildDetails = (child) => {
-    setSelectedChild(child); // Set a specific child for viewing details
+    setSelectedChild(child); 
   };
 
   const clearChildDetails = () => {
-    setSelectedChild(null); // Clear the selected child
+    setSelectedChild(null); 
   };
 
   return (

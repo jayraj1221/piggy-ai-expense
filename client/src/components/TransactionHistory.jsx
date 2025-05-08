@@ -4,7 +4,7 @@ const TransactionHistory = ({ data = [] }) => {
     const [showAll, setShowAll] = useState(false);
     
     // Ensure data is an array to prevent errors
-    const transactions = Array.isArray(data) ? data : [];
+    const transactions = Array.isArray(data) ? [...data].reverse() : [];
     
     // Get either the latest 5 transactions or all transactions based on state
     const displayedTransactions = showAll ? transactions : transactions.slice(0, 5);

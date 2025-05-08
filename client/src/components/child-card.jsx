@@ -44,7 +44,7 @@ export default function ChildCard({ child, parentId, onMoneyAssigned }) {
         variant="outline"
         size="sm"
         className="mt-2"
-        onClick={handleViewDetails} // ✅ Use handler that sets context + navigates
+        onClick={handleViewDetails} 
       >
         View Details
       </Button>

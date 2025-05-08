@@ -9,8 +9,10 @@ export const UserProvider = ({ children }) => {
 
   useEffect(() => {
 
+    setLoading(true); 
     const savedToken = localStorage.getItem("token");
     const savedUser = localStorage.getItem("user");
+
 
     if (savedToken) {
       setToken(savedToken);

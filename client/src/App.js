@@ -8,32 +8,63 @@ import RegisterParentPage from './pages/register/parent';
 import ParentDashboard from './pages/dashboards/parentDashboard';
 import ChildDashboard from './pages/dashboards/childDashboard';
 import ChildDetails from './pages/ChildDetails';
-import { UserProvider } from "./context/UserContext";
-import { ChildProvider } from './context/ChildDetailsContext';
 import Goal from './pages/Goal';
 import ActivityReward from './pages/ActivityReward';
 
+import { UserProvider } from './context/UserContext';
+import { ChildProvider } from './context/ChildDetailsContext';
+
+import ProtectedRoute from './pages/ProtectedRoute'; 
 
 function App() {
   return (
     <UserProvider>
-        <ChildProvider>
-          <Router>
-            <div className="App">
-              <Routes>
-                <Route path="/child/:id" element={<ChildDetails />} />
-                <Route path="/login/parent" element={<ParentLoginPage />} />
-                <Route path="/register/parent" element={<RegisterParentPage />} />
-                <Route path="/login/child" element={<ChildLoginPage />} />
-                <Route path="/dashboard/parent" element={<ParentDashboard />} />
-                <Route path="/dashboard/child" element={<ChildDashboard />} />
-                <Route path="/goal" element={<Goal />} />
-                <Route path="/activity-reward" element={<ActivityReward />} />
-                <Route path="/" element={<Home />} />
-              </Routes>
-            </div>
-          </Router>
-        </ChildProvider>
+      <ChildProvider>
+        <Router>
+          <div className="App">
+            <Routes>
+              <Route path="/child/:id" element={
+                  <ProtectedRoute>
+                    <ChildDetails />
+                  </ProtectedRoute>
+                } />
+              <Route path="/login/parent" element={<ParentLoginPage />} />
+              <Route path="/register/parent" element={<RegisterParentPage />} />
+              <Route path="/login/child" element={<ChildLoginPage />} />
+
+              {/* Protected Routes */}
+              <Route
+                path="/dashboard/parent"
+                element={
+                  <ProtectedRoute>
+                    <ParentDashboard />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/dashboard/child"
+                element={
+                  <ProtectedRoute>
+                    <ChildDashboard />
+                  </ProtectedRoute>
+                }
+              />
+
+              <Route path="/goal" element={
+                  <ProtectedRoute>
+                    <Goal />
+                  </ProtectedRoute>
+                } />
+              <Route path="/activity-reward" element={
+                  <ProtectedRoute>
+                    <ActivityReward />
+                  </ProtectedRoute>
+                } />
+              <Route path="/" element={<Home />} />
+            </Routes>
+          </div>
+        </Router>
+      </ChildProvider>
     </UserProvider>
   );
 }

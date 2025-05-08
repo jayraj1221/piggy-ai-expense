@@ -1,63 +1,49 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ArrowLeft, Mic, Star, CheckCircle, Trophy } from 'lucide-react';
+import { Mic, X, Check, Award, DollarSign, ArrowLeft } from 'lucide-react';
+import axios from 'axios';
+import { useNavigate } from 'react-router-dom';
+import { useUser } from '../context/UserContext';
 
-const ActivityReward = () => {
-  // User state from backend
-  const [userData, setUserData] = useState({
-    pocketMoney: 0,
-    level: 1,
-    streakDays: 0,
-    character: 'ninja',
-    completedToday: 0
-  });
-  
-  // Activities state
-  const [activities, setActivities] = useState([]);
-  const [loadingActivities, setLoadingActivities] = useState(true);
-  const maxActivities = 5;
-  
-  // Speech recognition state
+const ActivityTracker = () => {
   const [isRecording, setIsRecording] = useState(false);
   const [spokenText, setSpokenText] = useState('');
-  const [processingActivity, setProcessingActivity] = useState(false);
-  
-  // Reward display state
+  const [visualWords, setVisualWords] = useState([]);
+  const [activityInput, setActivityInput] = useState('');
+  const [activities, setActivities] = useState([]);
+  const [dailyLimit, setDailyLimit] = useState(5);
   const [showReward, setShowReward] = useState(false);
-  const [currentReward, setCurrentReward] = useState(null);
-  const [showConfetti, setShowConfetti] = useState(false);
-  
+  const [isLoading, setIsLoading] = useState(false);
+  const [rewardAmount, setRewardAmount] = useState(0);
+  const navigate = useNavigate();
+
+  const { user } = useUser();
+
+  const token = localStorage.getItem('token');
+
   // Web Speech API reference
   const recognitionRef = useRef(null);
 
-  // Character styles
-  const characters = {
-    ninja: {
-      idle: "🥷",
-      happy: "🥷💪",
-      colors: "from-purple-500 to-indigo-600",
-      secondaryColor: "bg-indigo-100"
-    },
-    astronaut: {
-      idle: "👨‍🚀",
-      happy: "👨‍🚀🚀",
-      colors: "from-blue-500 to-cyan-600",
-      secondaryColor: "bg-blue-100"
-    },
-    wizard: {
-      idle: "🧙‍♂️",
-      happy: "🧙‍♂️✨",
-      colors: "from-amber-500 to-pink-600",
-      secondaryColor: "bg-amber-100"
+  useEffect(() => {
+    fetchActivities();
+  }, []);
+
+  
+  const fetchActivities = async () => {
+    setIsLoading(true);
+    try {
+      const response = await axios.get(
+        `${process.env.REACT_APP_SERVER_URL}/auth/get-activities`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      setActivities(response.data);
+      setIsLoading(false);
+    } catch (error) {
+      console.error("Error fetching activities:", error);
+      setIsLoading(false);
     }
   };
 
-  // Fetch user data and today's activities on component mount
-  useEffect(() => {
-    fetchUserData();
-    fetchTodayActivities();
-  }, []);
-
-  // Initialize Speech Recognition
   useEffect(() => {
     if (!('SpeechRecognition' in window || 'webkitSpeechRecognition' in window)) {
       console.error('Speech recognition not supported in this browser');
@@ -66,174 +52,52 @@ const ActivityReward = () => {
 
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     const recognition = new SpeechRecognition();
-    
+
     recognition.continuous = false;
-    recognition.interimResults = false;
+    recognition.interimResults = true;
     recognition.lang = 'en-US';
-    
+
     recognition.onresult = (event) => {
       const transcript = event.results[0][0].transcript;
       setSpokenText(transcript);
+      setActivityInput(transcript);
+
+      const words = transcript.split(' ').filter(word => word.trim() !== '');
+      setVisualWords(words);
     };
-    
+
     recognition.onerror = (event) => {
       console.error('Speech recognition error', event.error);
       setIsRecording(false);
     };
-    
+
     recognition.onend = () => {
       setIsRecording(false);
     };
-    
+
     recognitionRef.current = recognition;
-    
+
     return () => {
       if (recognitionRef.current) {
         try {
           recognitionRef.current.stop();
         } catch (e) {
-          // Ignore errors when stopping an already stopped recognition
+          console.error('Error stopping speech recognition', e);
         }
       }
     };
   }, []);
 
-  // API Functions
-  const fetchUserData = async () => {
-    try {
-      const response = await fetch('/api/user/profile');
-      if (!response.ok) throw new Error('Failed to fetch user data');
-      
-      const data = await response.json();
-      setUserData({
-        pocketMoney: data.pocketMoney || 0,
-        level: data.level || 1,
-        streakDays: data.streakDays || 0,
-        character: data.character || 'ninja',
-        completedToday: data.completedToday || 0
-      });
-    } catch (error) {
-      console.error('Error fetching user data:', error);
-      // Don't set fallback data - keep initial empty state
-    }
-  };
-
-  const fetchTodayActivities = async () => {
-    setLoadingActivities(true);
-    try {
-      const response = await fetch('/api/activities/today');
-      if (!response.ok) throw new Error('Failed to fetch activities');
-      
-      const data = await response.json();
-      
-      // Initialize empty activities if none are returned
-      if (!data.activities || data.activities.length === 0) {
-        // Create 5 empty activity slots
-        const emptyActivities = Array.from({ length: maxActivities }, (_, index) => ({
-          id: index,
-          text: '',
-          completed: false,
-          points: 0
-        }));
-        setActivities(emptyActivities);
-      } else {
-        setActivities(data.activities);
-      }
-    } catch (error) {
-      console.error('Error fetching activities:', error);
-      // Create 5 empty activity slots if fetch fails
-      const emptyActivities = Array.from({ length: maxActivities }, (_, index) => ({
-        id: index,
-        text: '',
-        completed: false,
-        points: 0
-      }));
-      setActivities(emptyActivities);
-    } finally {
-      setLoadingActivities(false);
-    }
-  };
-
-  const saveActivityToBackend = async (activityText) => {
-    setProcessingActivity(true);
-    try {
-      const response = await fetch('/api/activities/record', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ 
-          activityText,
-          timestamp: new Date().toISOString()
-        }),
-      });
-      
-      if (!response.ok) throw new Error('Failed to save activity');
-      
-      const data = await response.json();
-      
-      // Update local state with the backend-determined reward
-      updateStateWithReward(data);
-      
-      return data;
-    } catch (error) {
-      console.error('Error saving activity:', error);
-      alert('Could not save your activity. Please try again!');
-      return null;
-    } finally {
-      setProcessingActivity(false);
-    }
-  };
-
-  const updateStateWithReward = (responseData) => {
-    // Update activities
-    const updatedActivities = [...activities];
-    const emptySlotIndex = updatedActivities.findIndex(a => !a.completed);
-    
-    if (emptySlotIndex !== -1) {
-      updatedActivities[emptySlotIndex] = {
-        id: responseData.activityId,
-        text: responseData.activityText,
-        completed: true,
-        points: responseData.rewardPoints
-      };
-      setActivities(updatedActivities);
-    }
-    
-    // Update user data
-    setUserData(prev => ({
-      ...prev,
-      pocketMoney: responseData.newPocketMoney,
-      level: responseData.newLevel,
-      streakDays: responseData.streakDays,
-      completedToday: prev.completedToday + 1
-    }));
-    
-    // Show reward animation
-    setCurrentReward({
-      points: responseData.rewardPoints,
-      message: responseData.rewardMessage
-    });
-    setShowReward(true);
-    setTimeout(() => setShowReward(false), 3000);
-    
-    // Show confetti if all activities completed
-    if (responseData.allCompleted) {
-      setShowConfetti(true);
-      setTimeout(() => setShowConfetti(false), 4000);
-    }
-  };
-
-  // Speech Recording Functions
   const startRecording = () => {
     if (!recognitionRef.current) {
       alert('Speech recognition is not supported in your browser');
       return;
     }
-    
+
     setIsRecording(true);
     setSpokenText('');
-    
+    setVisualWords([]);
+
     try {
       recognitionRef.current.start();
     } catch (error) {
@@ -244,299 +108,278 @@ const ActivityReward = () => {
 
   const stopRecording = () => {
     if (!recognitionRef.current) return;
-    
+
     try {
       recognitionRef.current.stop();
     } catch (error) {
       console.error('Error stopping speech recognition:', error);
     }
-    
+
     setIsRecording(false);
   };
 
-  const handleSaveActivity = async () => {
-    if (!spokenText.trim() || processingActivity) return;
-    
-    const completedActivities = activities.filter(a => a.completed).length;
-    const remainingActivities = maxActivities - completedActivities;
-    
-    if (remainingActivities <= 0) {
-      alert('You have already completed all activities for today!');
-      return;
-    }
-    
-    const result = await saveActivityToBackend(spokenText);
-    if (result) {
+  const handleClearRecording = () => {
+    setSpokenText('');
+    setVisualWords([]);
+    setActivityInput('');
+  };
+
+  const submitHandler = async () => {
+    if (!activityInput.trim()) return;
+
+    setIsLoading(true);
+
+    try {
+      const response = await axios.post(
+        `${process.env.REACT_APP_SERVER_URL}/auth/add-activity`,
+        { activity: activityInput },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      const earnedReward = response.data.reward || 0;
+      setRewardAmount(earnedReward);
+
+      await fetchActivities();
+
+      setActivityInput('');
       setSpokenText('');
+      setVisualWords([]);
+
+      setShowReward(true);
+      setTimeout(() => setShowReward(false), 3000);
+
+      setIsLoading(false);
+    } catch (error) {
+      console.error("Error submitting activity:", error);
+      setIsLoading(false);
     }
   };
 
-  // Animation and UI elements
-  const [bounceFrame, setBounceFrame] = useState(0);
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setBounceFrame(prev => (prev + 1) % 20);
-    }, 50);
-    return () => clearInterval(interval);
-  }, []);
-  
-  const translateY = bounceFrame < 10 ? bounceFrame : 20 - bounceFrame;
-  const completedActivities = activities.filter(a => a.completed).length;
-  const progressPercentage = (completedActivities / maxActivities) * 100;
-  const currentCharacter = characters[userData.character] || characters.ninja;
-
-  const handleNavigateBack = () => {
-    // Implementation depends on your routing solution
-    console.log('Navigate back');
-    // Example: history.goBack();
-  };
+  const isLimitReached = activities.length >= dailyLimit;
 
   return (
     <div className="flex flex-col h-screen bg-gray-100 font-sans">
-      {/* Top header */}
-      <div className={`bg-gradient-to-r ${currentCharacter.colors} text-white p-4 flex items-center justify-between shadow-md`}>
-        <div className="flex items-center">
-          <button 
-            className="mr-3 hover:bg-white hover:bg-opacity-20 p-1 rounded-full"
-            onClick={handleNavigateBack}
-          >
-            <ArrowLeft size={24} />
-          </button>
-          <h1 className="text-xl font-bold">Daily Activity & Unlock Rewards</h1>
+      <div className="bg-gradient-to-r from-blue-600 to-indigo-700 text-white p-4 flex items-center justify-between shadow-md">
+        <div className='flex items-center gap-3'>
+        <button
+          onClick={() => navigate(-1)}
+          className="flex items-center font-medium"
+        >
+          <ArrowLeft className="w-5 h-5 mr-1" />
+        </button>
+        <h1 className="text-xl font-bold">Daily Activity Tracker</h1>
         </div>
-        <div className="flex items-center space-x-2">
-          <div className="bg-white bg-opacity-25 px-3 py-1 rounded-full flex items-center">
-            <span className="mr-1">⭐</span>
-            <span className="font-bold">{userData.level}</span>
+        <div className="flex items-center gap-3">
+          <div className="flex items-center bg-white bg-opacity-20 px-3 py-1 rounded-full">
+
+            <span> ₹ {user.pocketMoney}</span>
           </div>
-          <div className="bg-white bg-opacity-25 px-3 py-1 rounded-full flex items-center">
-            <span className="mr-1">💰</span>
-            <span className="font-bold">{userData.pocketMoney}</span>
+          <div className="text-sm bg-white bg-opacity-20 px-3 py-1 rounded-full">
+            {activities.length}/{dailyLimit} Activities
           </div>
         </div>
       </div>
 
-      {/* Main content */}
-      <div className="flex-1 p-4 overflow-y-auto">
-        {loadingActivities ? (
-          <div className="flex justify-center items-center h-32">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+      <div className="flex-1 p-4 flex flex-col max-w-lg mx-auto w-full">
+
+        {/* Activity Input Form */}
+        {!isLimitReached ? (
+          <div className="bg-white rounded-2xl p-6 shadow-lg border-2 border-gray-100 mb-4">
+            <h2 className="font-bold text-lg mb-4 flex items-center">
+              <span className="mr-2">📝</span>Log Your Activity
+            </h2>
+
+            <div>
+              <div className="mb-4">
+                <div className="mb-2 p-6 bg-gray-50 rounded-xl min-h-32 border-2 border-dashed border-gray-300 relative">
+                  {isRecording ? (
+                    <div className="flex flex-wrap gap-2 items-center justify-center min-h-16">
+                      {visualWords.length > 0 ? (
+                        visualWords.map((word, index) => (
+                          <div
+                            key={index}
+                            className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full animate-pop-in"
+                            style={{ animationDelay: `${index * 0.1}s` }}
+                          >
+                            {word}
+                          </div>
+                        ))
+                      ) : (
+                        <div className="flex items-center justify-center">
+                          <div className="flex space-x-1">
+                            <div className="w-3 h-3 bg-red-500 rounded-full animate-bounce" style={{ animationDelay: '0s' }}></div>
+                            <div className="w-3 h-3 bg-red-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                            <div className="w-3 h-3 bg-red-500 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></div>
+                          </div>
+                          <span className="ml-3 text-red-500 font-medium">Listening...</span>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <>
+                      <textarea
+                        value={activityInput}
+                        onChange={(e) => setActivityInput(e.target.value)}
+                        placeholder="Describe your activity here or use speech recording..."
+                        className="w-full h-24 bg-transparent outline-none resize-none"
+                      />
+
+                      {activityInput && (
+                        <button
+                          type="button"
+                          onClick={handleClearRecording}
+                          className="absolute top-2 right-2 p-1 rounded-full hover:bg-gray-200"
+                        >
+                          <X size={16} className="text-gray-500" />
+                        </button>
+                      )}
+                    </>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <button
+                  type="button"
+                  onClick={isRecording ? stopRecording : startRecording}
+                  disabled={isLimitReached}
+                  className={`py-2 px-4 flex items-center justify-center rounded-xl font-medium text-white shadow-md transition ${isRecording
+                      ? 'bg-red-500 hover:bg-red-600 animate-pulse'
+                      : 'bg-blue-500 hover:bg-blue-600'
+                    } ${isLimitReached ? 'opacity-50 cursor-not-allowed' : ''}`}
+                >
+                  <Mic size={18} className="mr-2" />
+                  <span>{isRecording ? 'Stop' : 'Record'}</span>
+                </button>
+
+                <button
+                  onClick={submitHandler}
+                  disabled={!activityInput.trim() || isLoading || isLimitReached}
+                  className={`py-2 px-6 flex items-center justify-center rounded-xl font-medium text-white shadow-md transition bg-gradient-to-r from-green-500 to-emerald-600 hover:opacity-90 ${(!activityInput.trim() || isLoading || isLimitReached) ? 'opacity-50 cursor-not-allowed' : ''
+                    }`}
+                >
+                  {isLoading ? (
+                    <div className="flex items-center">
+                      <div className="animate-spin mr-2 h-4 w-4 border-2 border-white border-t-transparent rounded-full"></div>
+                      <span>Submitting...</span>
+                    </div>
+                  ) : (
+                    <>
+                      <Check size={18} className="mr-2" />
+                      <span>Submit Activity</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
           </div>
         ) : (
-          <>
-            {/* Character and progress */}
-            <div className={`${currentCharacter.secondaryColor} rounded-xl p-6 mb-6 shadow-md relative overflow-hidden`}>
-              <div className="flex items-center justify-between mb-4">
-                <div>
-                  <h2 className="font-bold text-2xl mb-1">Daily Quests</h2>
-                  {userData.streakDays > 0 && (
-                    <div className="flex items-center">
-                      <div className="flex mr-2">
-                        {[...Array(Math.min(userData.streakDays, 5))].map((_, i) => (
-                          <div key={i} className="text-yellow-500 -ml-1">🔥</div>
-                        ))}
-                      </div>
-                      <span className="text-gray-700 text-sm">{userData.streakDays} day streak!</span>
-                    </div>
-                  )}
-                </div>
-                <div className="text-6xl" style={{ transform: `translateY(-${translateY/2}px)` }}>
-                  {completedActivities === maxActivities ? currentCharacter.happy : currentCharacter.idle}
-                </div>
-              </div>
-              
-              <div className="relative pt-1">
-                <div className="flex items-center justify-between mb-2">
-                  <div>
-                    <span className="font-bold text-gray-700">{completedActivities}/{maxActivities} Quests</span>
-                  </div>
-                  {completedActivities === maxActivities && (
-                    <span className="text-green-600 font-bold flex items-center">
-                      <Trophy size={16} className="mr-1" /> All Complete!
-                    </span>
-                  )}
-                </div>
-                <div className="h-4 bg-gray-200 rounded-full overflow-hidden">
-                  <div 
-                    className={`h-full rounded-full bg-gradient-to-r ${currentCharacter.colors} transition-all duration-1000 ease-out`}
-                    style={{ width: `${progressPercentage}%` }}
-                  ></div>
-                </div>
-              </div>
-            </div>
-
-            {/* Activities list */}
-            <div className="bg-white rounded-xl p-4 mb-6 shadow-md">
-              <h2 className="font-bold text-lg mb-4">My Activities</h2>
-              <div className="space-y-3">
-                {activities.map((activity, index) => (
-                  <div 
-                    key={activity.id || index}
-                    className={`p-4 rounded-xl border-2 transition-all duration-300 ${
-                      activity.completed 
-                        ? 'border-green-500 bg-green-50' 
-                        : 'border-gray-300 bg-gray-50'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center flex-1">
-                        {activity.completed ? (
-                          <div className="bg-green-500 text-white rounded-full p-1 mr-3 flex-shrink-0">
-                            <CheckCircle size={18} />
-                          </div>
-                        ) : (
-                          <div className="w-7 h-7 rounded-full border-2 border-gray-400 mr-3 flex-shrink-0 flex items-center justify-center text-xs font-bold text-gray-500">
-                            {index + 1}
-                          </div>
-                        )}
-                        <span className={`${activity.completed ? 'font-medium' : 'text-gray-500'}`}>
-                          {activity.completed ? activity.text : `Activity ${index + 1}`}
-                        </span>
-                      </div>
-                      {activity.completed && activity.points > 0 && (
-                        <div className="flex items-center bg-yellow-100 px-2 py-1 rounded-full text-yellow-700 font-bold text-sm ml-2">
-                          +{activity.points} 💰
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Voice recording */}
-            <div className="bg-white rounded-xl p-5 shadow-md">
-              <h2 className="font-bold text-lg mb-4">Record New Activity</h2>
-              
-              {completedActivities >= maxActivities ? (
-                <div className="text-center p-6 bg-yellow-50 rounded-xl border-2 border-yellow-200">
-                  <div className="text-5xl mb-3">🏆</div>
-                  <p className="text-gray-700 font-bold text-lg">Amazing job! All activities completed!</p>
-                  <p className="text-gray-500 mt-1">Come back tomorrow for new activities</p>
-                </div>
-              ) : (
-                <>
-                  <div className="mb-4 p-4 bg-gray-50 rounded-xl min-h-16 border-2 border-dashed border-gray-300">
-                    {isRecording ? (
-                      <div className="flex items-center justify-center">
-                        <div className="flex space-x-1">
-                          <div className="w-3 h-3 bg-red-500 rounded-full animate-bounce" style={{ animationDelay: '0s' }}></div>
-                          <div className="w-3 h-3 bg-red-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-                          <div className="w-3 h-3 bg-red-500 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></div>
-                        </div>
-                        <span className="ml-3 text-red-500 font-medium">Recording your activity...</span>
-                      </div>
-                    ) : (
-                      <p className="text-gray-700">{spokenText || "Tap the mic button to record your activity"}</p>
-                    )}
-                  </div>
-                  
-                  <div className="flex gap-3">
-                    <button
-                      onClick={isRecording ? stopRecording : startRecording}
-                      disabled={processingActivity}
-                      className={`flex-1 py-3 flex items-center justify-center rounded-xl font-bold text-white shadow-md transition ${
-                        isRecording 
-                          ? 'bg-red-500 hover:bg-red-600' 
-                          : processingActivity
-                            ? 'bg-gray-400'
-                            : `bg-gradient-to-r ${currentCharacter.colors} hover:opacity-90`
-                      }`}
-                    >
-                      <Mic size={20} className="mr-2" />
-                      <span>{isRecording ? 'Stop Recording' : 'Record Activity'}</span>
-                    </button>
-                    
-                    <button
-                      onClick={handleSaveActivity}
-                      disabled={!spokenText || processingActivity}
-                      className={`flex-1 py-3 flex items-center justify-center rounded-xl font-bold shadow-md transition ${
-                        spokenText && !processingActivity
-                          ? 'bg-green-500 text-white hover:bg-green-600' 
-                          : 'bg-gray-200 text-gray-400'
-                      }`}
-                    >
-                      {processingActivity ? (
-                        <>
-                          <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
-                          Processing...
-                        </>
-                      ) : (
-                        <>
-                          <Star size={20} className="mr-2" />
-                          <span>Save Activity</span>
-                        </>
-                      )}
-                    </button>
-                  </div>
-                </>
-              )}
-            </div>
-          </>
+          <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-4 rounded-md">
+            <p className="text-yellow-700">
+              <span className="font-bold">Daily limit reached!</span> You've completed your 5 activities for today.
+            </p>
+          </div>
         )}
+
+        {/* Completed Activities List */}
+        <div className="bg-white rounded-2xl p-6 shadow-lg border-2 border-gray-100">
+          <h2 className="font-bold text-lg mb-4 flex items-center">
+            <span className="mr-2">✅</span>Completed Activities
+          </h2>
+
+          {isLoading && activities.length === 0 ? (
+            <div className="flex justify-center p-6">
+              <div className="animate-spin h-8 w-8 border-4 border-blue-500 border-t-transparent rounded-full"></div>
+            </div>
+          ) : activities.length > 0 ? (
+            <ul className="space-y-3">
+              {activities.map((activity) => (
+                <li
+                  key={activity.id}
+                  className="p-3 bg-gray-50 rounded-lg border border-gray-200 flex items-center"
+                >
+                  <div className="h-8 w-8 bg-green-100 rounded-full flex items-center justify-center mr-3">
+                    <Check size={16} className="text-green-600" />
+                  </div>
+                  <p className="text-gray-700">{activity.activity || activity.text}</p>
+                  {(
+                    <div className="ml-auto bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full flex items-center">
+                      <span>₹ {activity.reward.toFixed(2)}</span>
+                    </div>
+                  )}
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-center text-gray-500 py-6">No activities completed yet. Add your first one!</p>
+          )}
+        </div>
       </div>
 
-      {/* Reward popup animation */}
-      {showReward && currentReward && (
-        <div className="fixed inset-0 flex items-center justify-center z-50 pointer-events-none">
-          <div className="bg-white rounded-xl p-6 shadow-xl animate-bounce-up text-center">
-            <div className="text-4xl mb-2">🎉</div>
-            <h3 className="text-xl font-bold text-green-600">Activity Complete!</h3>
-            <p className="text-gray-600 my-2">{currentReward.message || "Great job!"}</p>
-            <div className="text-yellow-500 font-bold mt-2 text-2xl flex items-center justify-center">
-              +{currentReward.points} 💰
+      {/* Reward Animation */}
+      {showReward && (
+        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-60 z-50">
+          <div className="bg-white rounded-2xl p-8 max-w-md w-full text-center animate-bounce-in">
+            <div className="mx-auto w-20 h-20 bg-yellow-100 rounded-full flex items-center justify-center mb-4">
+              <Award size={40} className="text-yellow-500" />
+            </div>
+            <h3 className="text-2xl font-bold mb-2">Reward Unlocked!</h3>
+            <div className="flex items-center justify-center mb-4">
+              <div className="flex items-center bg-green-100 px-4 py-2 rounded-full">
+                <span className="text-2xl font-bold text-green-600">₹ {rewardAmount.toFixed(2)}</span>
+              </div>
+            </div>
+            <p className="text-gray-600 mb-4">Great job completing your activity!</p>
+            <button
+              onClick={() => setShowReward(false)}
+              className="bg-gradient-to-r from-blue-600 to-indigo-700 text-white py-2 px-6 rounded-lg font-medium"
+            >
+              Continue
+            </button>
+            <div className="relative mt-4">
+              <div className="animate-money-flow">
+                ₹
+              </div>
             </div>
           </div>
         </div>
       )}
 
-      {/* Confetti effect */}
-      {showConfetti && (
-        <div className="fixed inset-0 pointer-events-none z-40">
-          {[...Array(50)].map((_, i) => {
-            const size = Math.random() * 12 + 5;
-            const left = Math.random() * 100;
-            const animDuration = Math.random() * 3 + 2;
-            const delay = Math.random() * 0.5;
-            const color = ['bg-red-500', 'bg-blue-500', 'bg-green-500', 'bg-yellow-500', 'bg-purple-500', 'bg-pink-500'][Math.floor(Math.random() * 6)];
-            
-            return (
-              <div 
-                key={i}
-                className={`absolute ${color} rounded-full animate-confetti`}
-                style={{
-                  width: size + 'px',
-                  height: size + 'px',
-                  left: left + '%',
-                  top: '-20px',
-                  animationDelay: delay + 's'
-                }}
-              />
-            );
-          })}
-        </div>
-      )}
-
-      <style jsx>{`
-        @keyframes bounceUp {
-          0% { transform: translateY(50px); opacity: 0; }
-          60% { transform: translateY(-20px); opacity: 1; }
-          80% { transform: translateY(5px); }
-          100% { transform: translateY(0); }
+      <style>{`
+        @keyframes popIn {
+          0% { transform: scale(0); opacity: 0; }
+          70% { transform: scale(1.1); opacity: 1; }
+          100% { transform: scale(1); opacity: 1; }
         }
-        @keyframes confetti {
-          0% { transform: translateY(0) rotate(0deg); opacity: 1; }
-          100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
+        
+        .animate-pop-in {
+          animation: popIn 0.5s ease-out forwards;
         }
-        .animate-bounce-up {
-          animation: bounceUp 1s ease-out forwards;
+        
+        @keyframes bounceIn {
+          0% { transform: scale(0.3); opacity: 0; }
+          40% { transform: scale(1.1); }
+          60% { transform: scale(0.9); }
+          80% { transform: scale(1.03); }
+          100% { transform: scale(1); opacity: 1; }
         }
-        .animate-confetti {
-          animation: confetti var(--duration, 3s) ease-out forwards;
+        
+        .animate-bounce-in {
+          animation: bounceIn 0.6s ease-out forwards;
+        }
+        
+        @keyframes moneyFlow {
+          0% { transform: translate(0, 0) scale(1); opacity: 1; }
+          50% { transform: translate(-150px, -100px) scale(1.5); opacity: 0.7; }
+          100% { transform: translate(-300px, -200px) scale(0.5); opacity: 0; }
+        }
+        
+        .animate-money-flow {
+          animation: moneyFlow 2s ease-out forwards;
         }
       `}</style>
     </div>
   );
 };
 
-export default ActivityReward;
+export default ActivityTracker;
